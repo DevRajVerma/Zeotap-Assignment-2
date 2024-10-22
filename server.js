@@ -1,10 +1,21 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const app = express();
 const PORT = 3000;
 const axios = require("axios");
+// const nodemailer = require("nodemailer");
+const WeatherRecord = require("./models/WeatherRecord");
+
+// MongoDB connection
+mongoose
+  .connect(
+    "mongodb+srv://drverma2704:AavYzM7b818uX6uH@giftwala.x1ywjoh.mongodb.net/ZeoAssignment2"
+  )
+  .then(() => console.log("DB connected"))
+  .catch((err) => console.log(err));
+
 
 const apiKey = "9b92c301f1c7d1346f9aeaea15688497";
-
 const cities = [
   "Delhi",
   "Mumbai",
@@ -14,79 +25,97 @@ const cities = [
   "Hyderabad",
 ];
 
-// const city = 'Delhi';
+// Function to calculate daily summaries
+async function calculateDailySummary(city, date) {
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
 
-// const url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
 
+  const records = await WeatherRecord.find({
+    city: city,
+    timestamp: {
+      $gte: startOfDay,
+      $lte: endOfDay,
+    },
+  });
+
+  if (records.length === 0) return null;
+
+  // Calculate aggregates
+  const temperatures = records.map((r) => r.temperature);
+  const weatherConditions = records.map((r) => r.weatherCondition);
+
+  // Find dominant weather condition (mode)
+  const conditionCounts = {};
+  let maxCount = 0;
+  let dominantCondition = weatherConditions[0];
+
+  weatherConditions.forEach((condition) => {
+    conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
+    if (conditionCounts[condition] > maxCount) {
+      maxCount = conditionCounts[condition];
+      dominantCondition = condition;
+    }
+  });
+
+  return {
+    city: city,
+    date: startOfDay,
+    avgTemperature: temperatures.reduce((a, b) => a + b) / temperatures.length,
+    maxTemperature: Math.max(...temperatures),
+    minTemperature: Math.min(...temperatures),
+    dominantWeatherCondition: dominantCondition,
+    recordCount: records.length,
+  };
+}
+
+// API endpoints
 app.use(express.json());
 
-// Function to fetch weather data for a city
+// Function to fetch and store weather data
 const fetchWeatherData = async (city) => {
-  try {
-    const url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
-    const response = await axios.get(url);
-    const data = response.data;
-
-    let weatherCondition = data.weather[0].main;
-    let tempInKelvin = data.main.temp;
-    let tempInCelsius = (tempInKelvin - 273.15).toFixed(2);
-    let feelsLikeInCelsius = (data.main.feels_like - 273.15).toFixed(2);
-    let timestamp = new Date(data.dt * 1000);
-
-    // Log data to the console
-    console.log(`Weather in ${city}: ${weatherCondition}`);
-    console.log(`Temperature: ${tempInCelsius} °C`);
-    console.log(`Feels Like: ${feelsLikeInCelsius} °C`);
-    console.log(`Timestamp: ${timestamp}`);
-
-    return {
-      city: city,
-      weatherCondition: weatherCondition,
-      temperature: `${tempInCelsius} °C`,
-      feelsLike: `${feelsLikeInCelsius} °C`,
-      timestamp: timestamp.toLocaleString(), //This time is coming from OpenWeather API
-      //Maybe the time at which they fetched the data or updated it, I don't know
-    //But this time is not when I fetched data
-    };
-  } catch (error) {
-    console.error(`Error fetching weather data for ${city}:`, error.message);
-    return null;
-  }
-};
-
-// axios.get(url)
-
-app.get("/", async (req, res) => {
-  try {
-    const city = req.query.city || "Delhi";
-    const weatherData = await fetchWeatherData(city);
-
-    if (weatherData) {
-      res.json(weatherData);
-    } else {
-      res.status(500).send("Error retrieving weather Data");
+    try {
+      const url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
+      const response = await axios.get(url);
+      const data = response.data;
+  
+      const weatherData = {
+        city: city,
+        weatherCondition: data.weather[0].main,
+        temperature: Number((data.main.temp - 273.15).toFixed(2)),
+        feelsLike: Number((data.main.feels_like - 273.15).toFixed(2)),
+        timestamp: new Date(data.dt * 1000),
+      };
+  
+      // Save to MongoDB
+      const weatherRecord = new WeatherRecord(weatherData);
+      await weatherRecord.save();
+  
+      // Check alerts
+      // await checkAlertThresholds(weatherData);
+  
+      return weatherData;
+    } catch (error) {
+      console.error(`Error fetching weather data for ${city}:`, error.message);
+      return null;
     }
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error retrieving weather data.");
-  }
-});
+  };
 
-// Periodic API calls to fetch weather data every 5 minutes
+// Start periodic data fetching
 const startWeatherDataFetching = () => {
   setInterval(async () => {
-    cities.forEach(async (city) => {
-      const weatherData = await fetchWeatherData(city);
-      // You can process or store this data here for later use, e.g., saving to a database
-    });
-
+    for (const city of cities) {
+      await fetchWeatherData(city);
+    }
     console.log(
       "Weather data fetched for all cities at " + new Date().toLocaleString()
     );
-  }, 1 * 60 * 1000); // Fetch data every 5 minutes (5 minutes = 300000 ms)
+  }, 1 * 60 * 1000); // 5 minutes
 };
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
-  startWeatherDataFetching(); //Start fetching weather data every five minutes
+  startWeatherDataFetching();
 });
