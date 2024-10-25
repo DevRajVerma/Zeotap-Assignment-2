@@ -14,3 +14,7 @@ we are using AlertThresholds to create alerts, but we have never created thresho
 
 
 Daily summary calculating accurately, just something about the date, its calculating for yesterday which is technically correct as we have all the weather records for last day and not the weather records for today's date, well, will see about it later 
+
+Now let's just check the alert System
+
+Then do the visualization and frontend part and all clear

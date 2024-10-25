@@ -42,5 +42,5 @@ cronSchedular();
 // Start the server and data fetching
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
-  startWeatherDataFetching();
+  startWeatherDataFetching(); //alertsystem also working inside
 });

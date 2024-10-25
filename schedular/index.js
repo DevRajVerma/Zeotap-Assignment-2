@@ -6,8 +6,8 @@ const {
 // Initializes the cron scheduler for daily summary calculations
 function cronSchedular() {
   // Schedules the job to run every day at 00:05 AM
-  // cron.schedule("5 0 * * *", async () => {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("5 0 * * *", async () => {
+  // cron.schedule("* * * * *", async () => {
     try {
       // console.log("Running daily summary calculations...");
       console.log(`Running daily summary calculations at ${new Date().toLocaleString()}...`);

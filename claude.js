@@ -1,90 +1,64 @@
-async function calculateAndStoreDailySummary(city, date) {
+// Function to convert Kelvin to Celsius with proper rounding
+const kelvinToCelsius = (kelvin) => {
+  return Number((kelvin - 273.15).toFixed(2));
+};
+
+// Function to fetch and store weather data with retry mechanism
+const fetchWeatherData = async (city, retryCount = 3) => {
+  for (let attempt = 1; attempt <= retryCount; attempt++) {
     try {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      const records = await WeatherRecord.find({
-        city: city,
-        timestamp: {
-          $gte: startOfDay,
-          $lte: endOfDay,
-        },
-      }).sort({ timestamp: 1 });
-      
-      if (records.length === 0) {
-        console.log(`No records found for ${city} on ${date.toDateString()}`);
-        return;
-      }
-  
-      const temperatures = records
-        .map(r => r.temperature)
-        .filter(temp => temp != null && !isNaN(temp));
-  
-      if (temperatures.length === 0) {
-        throw new Error(`No valid temperature readings found for ${city} on ${date.toDateString()}`);
-      }
-  
-      const avgTemperature = Math.round((temperatures.reduce((a, b) => a + b) / temperatures.length) * 10) / 10;
-      const maxTemperature = Math.round(Math.max(...temperatures) * 10) / 10;
-      const minTemperature = Math.round(Math.min(...temperatures) * 10) / 10;
-  
-      const conditionCounts = {};
-      let maxDuration = 0;
-      let dominantCondition = null;
-  
-      for (let i = 0; i < records.length; i++) {
-        const condition = records[i].weatherCondition;
-        if (!condition) continue;
-  
-        const currentTime = new Date(records[i].timestamp);
-        const nextTime = records[i + 1] 
-          ? new Date(records[i + 1].timestamp)
-          : endOfDay;
-        
-        const duration = nextTime - currentTime;
-        conditionCounts[condition] = (conditionCounts[condition] || 0) + duration;
-        
-        if (conditionCounts[condition] > maxDuration) {
-          maxDuration = conditionCounts[condition];
-          dominantCondition = condition;
-        }
-      }
-  
-      const summaryData = {
-        city: city,
-        date: startOfDay,
-        avgTemperature,
-        maxTemperature,
-        minTemperature,
-        dominantWeatherCondition: dominantCondition,
-      };
-  
-      const existingSummary = await DailySummary.findOne({
-        city: city,
-        date: {
-          $gte: startOfDay,
-          $lte: endOfDay
-        }
+      const url = `http://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}`;
+      const response = await axios.get(url, {
+        timeout: 5000 // 5 second timeout
       });
-  
-      if (existingSummary) {
-        // Update without including _id field
-        await DailySummary.findByIdAndUpdate(existingSummary._id, 
-          { $set: summaryData },
-          { new: true }
-        );
-        console.log(`Updated daily summary for ${city} on ${date.toDateString()}`);
-      } else {
-        const summary = new DailySummary(summaryData);
-        await summary.save();
-        console.log(`Created daily summary for ${city} on ${date.toDateString()}`);
+      
+      const data = response.data;
+      
+      // Validate received data
+      if (!data.main || !data.weather || !data.weather[0]) {
+        throw new Error('Invalid data structure received from API');
       }
-  
+
+      const weatherData = {
+        city: city,
+        weatherCondition: data.weather[0].main,
+        temperature: kelvinToCelsius(data.main.temp),
+        feelsLike: kelvinToCelsius(data.main.feels_like),
+        timestamp: new Date(data.dt * 1000),
+        humidity: data.main.humidity,
+        windSpeed: data.wind.speed,
+        apiResponse: data // Store the complete response for reference
+      };
+
+      // Save to MongoDB with error handling
+      try {
+        const weatherRecord = new WeatherRecord(weatherData);
+        await weatherRecord.save();
+        
+        // Process alerts only after successful save
+        const alerts = await alertSystem.processWeatherData({
+          city: weatherData.city,
+          temperature: weatherData.temperature,
+          weatherCondition: weatherData.weatherCondition,
+        });
+
+        if (alerts.length > 0) {
+          console.log(`Generated ${alerts.length} alerts for ${city}`);
+        }
+
+        return weatherData;
+      } catch (dbError) {
+        console.error(`Database error for ${city}:`, dbError);
+        throw dbError;
+      }
+
     } catch (error) {
-      console.error(`Error calculating daily summary for ${city} on ${date.toDateString()}:`, error);
-      throw error;
+      if (attempt === retryCount) {
+        console.error(`Failed to fetch weather data for ${city} after ${retryCount} attempts:`, error.message);
+        return null;
+      }
+      console.log(`Attempt ${attempt} failed for ${city}, retrying...`);
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
     }
   }
+};
