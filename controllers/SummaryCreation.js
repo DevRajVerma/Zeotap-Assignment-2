@@ -1,7 +1,8 @@
-// const WeatherRecord = require("../models/WeatherRecord");
+// Required models for weather data and daily summaries
 const WeatherRecord = require("../models/WeatherRecord");
 const DailySummary = require("../models/DailySummary");
 
+// List of cities for daily summary calculations
 const cities = [
   "Delhi",
   "Mumbai",
@@ -11,15 +12,17 @@ const cities = [
   "Hyderabad",
 ];
 
-// Function to calculate and store daily summary for a city
+// Function to calculate and store a daily summary for a specified city and date
 async function calculateAndStoreDailySummary(city, date) {
   try {
+    // Define start and end times of the specified date for record filtering
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
+    // Retrieve weather records for the city within the date range
     const records = await WeatherRecord.find({
       city: city,
       timestamp: {
@@ -28,54 +31,114 @@ async function calculateAndStoreDailySummary(city, date) {
       },
     });
 
-    // console.log("land lega ankush");
-    
-
+    // If no records are found, log and exit the function
     if (records.length === 0) {
       console.log(`No records found for ${city} on ${date.toDateString()}`);
       return;
     }
 
-    const temperatures = records.map((r) => r.temperature);
-    const weatherConditions = records.map((r) => r.weatherCondition);
+    // Extract and validate temperatures
+    const temperatures = records
+      .map((r) => r.temperature)
+      .filter((temp) => temp != null && !isNaN(temp));
 
-    // Calculate dominant weather condition
+    if (temperatures.length === 0) {
+      throw new Error(
+        `No valid temperature readings found for ${city} on ${date.toDateString()}`
+      );
+    }
+
+    // Calculate temperature statistics (rounded to 1 decimal place)
+    const avgTemperature =
+      Math.round(
+        (temperatures.reduce((a, b) => a + b) / temperatures.length) * 10
+      ) / 10;
+    const maxTemperature = Math.round(Math.max(...temperatures) * 10) / 10;
+    const minTemperature = Math.round(Math.min(...temperatures) * 10) / 10;
+
+    // const weatherConditions = records.map((r) => r.weatherCondition);
+
+    // Determine the dominant weather condition
     const conditionCounts = {};
-    let maxCount = 0;
-    let dominantCondition = weatherConditions[0];
+    let maxDuration = 0;
+    let dominantCondition = null;
 
-    weatherConditions.forEach((condition) => {
-      conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
-      if (conditionCounts[condition] > maxCount) {
-        maxCount = conditionCounts[condition];
+    // Calculate weighted conditions based on time duration
+    for (let i = 0; i < records.length; i++) {
+      const condition = records[i].weatherCondition;
+      if (!condition) continue;
+
+      // Calculate duration until next record or end of day
+      const currentTime = new Date(records[i].timestamp);
+      const nextTime = records[i + 1]
+        ? new Date(records[i + 1].timestamp)
+        : endOfDay;
+
+      const duration = nextTime - currentTime;
+      conditionCounts[condition] = (conditionCounts[condition] || 0) + duration;
+
+      if (conditionCounts[condition] > maxDuration) {
+        maxDuration = conditionCounts[condition];
         dominantCondition = condition;
       }
-    });
+    }
 
-    // Create summary object
-    const summary = new DailySummary({
+    // Create a daily summary object based on calculated data
+    // const summary = new DailySummary({
+    //   city: city,
+    //   date: startOfDay,
+    //   avgTemperature,
+    //   maxTemperature,
+    //   minTemperature,
+    //   dominantWeatherCondition: dominantCondition,
+    // });
+
+    const summaryData = {
       city: city,
       date: startOfDay,
-      avgTemperature:
-        temperatures.reduce((a, b) => a + b) / temperatures.length,
-      maxTemperature: Math.max(...temperatures),
-      minTemperature: Math.min(...temperatures),
+      avgTemperature,
+      maxTemperature,
+      minTemperature,
       dominantWeatherCondition: dominantCondition,
-      recordCount: records.length,
+    };
+
+    // Check for existing summary to avoid duplicates
+    const existingSummary = await DailySummary.findOne({
+      city: city,
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
     });
 
-    // Save summary to database
-    await summary.save();
-    console.log(`Daily summary saved for ${city} on ${date.toDateString()}`);
+    if (existingSummary) {
+      // await DailySummary.findByIdAndUpdate(existingSummary._id, summary);
+      await DailySummary.findByIdAndUpdate(existingSummary._id, 
+        { $set: summaryData },
+        { new: true }
+      );
+      console.log(
+        `Updated daily summary for ${city} on ${date.toDateString()}`
+      );
+    } else {
+      const summary = new DailySummary(summaryData);
+      await summary.save();
+      console.log(
+        `Created daily summary for ${city} on ${date.toDateString()}`
+      );
+    }
   } catch (error) {
-    console.error(`Error calculating daily summary for ${city}:`, error);
+    console.error(
+      `Error calculating daily summary for ${city} on ${date.toDateString()}:`,
+      error
+    );
+    throw error;
   }
 }
 
-// Function to calculate summaries for all cities
+// Function to calculate daily summaries for all cities on a specified date
 async function calculateAllCitiesSummaries(date) {
-  // console.log("chut dedo");
-  
+  // Iterate over the list of cities and calculate summaries for each
   for (const city of cities) {
     await calculateAndStoreDailySummary(city, date);
   }

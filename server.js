@@ -6,10 +6,10 @@ const cors = require("cors");
 
 const { startWeatherDataFetching } = require("./controllers/fetchWeatherData");
 const { cronSchedular } = require("./schedular");
-
+const alertSystem = require("./services/alertSystem");
 const appRoutes = require("./routes/saareRoutes");
 
-// MongoDB connection
+// Connect to MongoDB
 mongoose
   .connect(
     "mongodb+srv://drverma2704:AavYzM7b818uX6uH@giftwala.x1ywjoh.mongodb.net/ZeoAssignment2"
@@ -17,22 +17,29 @@ mongoose
   .then(() => console.log("DB connected"))
   .catch((err) => console.log(err));
 
-// API endpoints
-app.use(express.json());
+// Set up alert event listener
+alertSystem.on("alert", async (alert) => {
+  console.log("Weather Alert:", alert.message);
+  // Additional notification methods, e.g., email or SMS, can be added here
+});
 
+// Middleware
+app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:3000", // Your frontend URL
+    origin: "http://localhost:3000",
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
 );
+
+// Register routes
 app.use("/api", appRoutes);
 
-// Schedule daily summary calculation at 00:05 AM (5 minutes after midnight)
-// This allows time for any final weather records from the previous day to be stored
+// Schedule daily summary calculation
 cronSchedular();
 
+// Start the server and data fetching
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
   startWeatherDataFetching();

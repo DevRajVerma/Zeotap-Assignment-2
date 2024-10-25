@@ -14,6 +14,10 @@ class WeatherAlertSystem extends EventEmitter {
   async processWeatherData(weatherData) {
     try {
       const thresholds = await AlertThreshold.find({ city: weatherData.city });
+      // console.log(thresholds);
+
+      //we getting all the thresholds in our db
+
       const alerts = [];
       const now = new Date();
 
@@ -21,10 +25,15 @@ class WeatherAlertSystem extends EventEmitter {
         const thresholdKey = threshold._id.toString();
         let isThresholdBreached = false;
 
+        console.log("Threshold value", threshold.value);
+        console.log("Temperature in Delhi", weatherData.temperature);
+
         switch (threshold.alertType) {
           case "HIGH_TEMPERATURE":
             isThresholdBreached = weatherData.temperature >= threshold.value;
+
             break;
+          // console.log("ek baar lele babbe wali");
           case "LOW_TEMPERATURE":
             isThresholdBreached = weatherData.temperature <= threshold.value;
             break;
@@ -57,6 +66,8 @@ class WeatherAlertSystem extends EventEmitter {
           }
         }
       }
+
+      // console.log("no alerts", alerts);
 
       return alerts;
     } catch (error) {

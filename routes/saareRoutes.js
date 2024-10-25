@@ -3,6 +3,7 @@ const DailySummary = require("../models/DailySummary");
 const WeatherRecord = require("../models/WeatherRecord");
 const express = require("express");
 const router = express.Router();
+const alertController = require("../controllers/alertController");
 
 //Get Daily summary
 router.post(
@@ -62,6 +63,11 @@ router.post(
     }
   }
 );
+
+// Add these routes to your existing router
+router.post('/thresholds', alertController.createThreshold);
+router.get('/thresholds', alertController.getThresholds);
+router.get('/alerts', alertController.getAlerts);
 
 // Function to calculate daily summaries
 async function calculateDailySummary(city, date) {

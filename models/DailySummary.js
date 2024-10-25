@@ -6,8 +6,8 @@ const dailySummarySchema = new  mongoose.Schema({
     avgTemperature : Number,
     maxTemperature: Number,
     minTemperature: Number,
-    dominantWeatherCondition: String,
-    recordCount: Number
+    dominantWeatherCondition: String
+    // recordCount: Number
 });
 
 const DailySummary = mongoose.model('DailySummary', dailySummarySchema);
