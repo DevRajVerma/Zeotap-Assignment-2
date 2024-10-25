@@ -18,3 +18,5 @@ Daily summary calculating accurately, just something about the date, its calcula
 Now let's just check the alert System
 
 Then do the visualization and frontend part and all clear
+
+Added some real thresholds and considering alert System is working fine 

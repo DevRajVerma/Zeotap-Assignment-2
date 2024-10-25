@@ -1,6 +1,5 @@
 const EventEmitter = require("events");
 const Alert = require("../models/alert.js");
-
 const AlertThreshold = require("../models/alertThreshold.js");
 
 class WeatherAlertSystem extends EventEmitter {
@@ -13,36 +12,31 @@ class WeatherAlertSystem extends EventEmitter {
 
   async processWeatherData(weatherData) {
     try {
+      // Validate input data
+      if (!weatherData || !weatherData.city || !weatherData.temperature) {
+        console.error("Invalid weather data received:", weatherData);
+        return [];
+      }
+
       const thresholds = await AlertThreshold.find({ city: weatherData.city });
-      // console.log(thresholds);
-
-      //we getting all the thresholds in our db
-
       const alerts = [];
       const now = new Date();
 
       for (const threshold of thresholds) {
         const thresholdKey = threshold._id.toString();
-        let isThresholdBreached = false;
 
-        console.log("Threshold value", threshold.value);
-        console.log("Temperature in Delhi", weatherData.temperature);
-
-        switch (threshold.alertType) {
-          case "HIGH_TEMPERATURE":
-            isThresholdBreached = weatherData.temperature >= threshold.value;
-
-            break;
-          // console.log("ek baar lele babbe wali");
-          case "LOW_TEMPERATURE":
-            isThresholdBreached = weatherData.temperature <= threshold.value;
-            break;
-          case "WEATHER_CONDITION":
-            isThresholdBreached =
-              weatherData.weatherCondition === threshold.condition;
-            break;
+        // Check if threshold is valid
+        if (!threshold.value && threshold.alertType !== "WEATHER_CONDITION") {
+          console.warn(`Invalid threshold configuration for ${thresholdKey}`);
+          continue;
         }
 
+        const isThresholdBreached = this.checkThresholdBreach(
+          threshold,
+          weatherData
+        );
+
+        // Update consecutive counts
         let currentCount = this.consecutiveCounts.get(thresholdKey) || 0;
         if (isThresholdBreached) {
           currentCount++;
@@ -52,6 +46,7 @@ class WeatherAlertSystem extends EventEmitter {
           continue;
         }
 
+        // Check if alert should be triggered
         if (currentCount >= threshold.consecutiveChecks) {
           const lastTrigger = this.lastTriggered.get(thresholdKey);
           const cooldownElapsed =
@@ -59,15 +54,20 @@ class WeatherAlertSystem extends EventEmitter {
             now.getTime() - lastTrigger.getTime() >= this.ALERT_COOLDOWN;
 
           if (cooldownElapsed) {
-            const alert = await this.createAlert(threshold, weatherData);
-            alerts.push(alert);
-            this.lastTriggered.set(thresholdKey, now);
-            this.emit("alert", alert);
+            try {
+              const alert = await this.createAlert(threshold, weatherData);
+              alerts.push(alert);
+              this.lastTriggered.set(thresholdKey, now);
+              this.emit("alert", alert);
+            } catch (error) {
+              console.error(
+                `Failed to create alert for threshold ${thresholdKey}:`,
+                error
+              );
+            }
           }
         }
       }
-
-      // console.log("no alerts", alerts);
 
       return alerts;
     } catch (error) {
@@ -76,15 +76,37 @@ class WeatherAlertSystem extends EventEmitter {
     }
   }
 
+  checkThresholdBreach(threshold, weatherData) {
+    switch (threshold.alertType) {
+      case "HIGH_TEMPERATURE":
+        return weatherData.temperature >= threshold.value;
+      case "LOW_TEMPERATURE":
+        return weatherData.temperature <= threshold.value;
+      case "WEATHER_CONDITION":
+        return weatherData.weatherCondition === threshold.condition;
+      default:
+        console.warn(`Unknown alert type: ${threshold.alertType}`);
+        return false;
+    }
+  }
+
   async createAlert(threshold, weatherData) {
-    const message = this.generateAlertMessage(threshold, weatherData);
-    const alert = new Alert({
-      thresholdId: threshold._id,
-      message,
-      city: weatherData.city,
-    });
-    await alert.save();
-    return alert;
+    try {
+      const message = this.generateAlertMessage(threshold, weatherData);
+      const alert = new Alert({
+        thresholdId: threshold._id,
+        message,
+        city: weatherData.city,
+        timestamp: new Date(),
+        alertType: threshold.alertType,
+        thresholdValue: threshold.value,
+        currentValue: weatherData.temperature,
+      });
+      return await alert.save();
+    } catch (error) {
+      console.error("Error creating alert:", error);
+      throw error;
+    }
   }
 
   generateAlertMessage(threshold, weatherData) {

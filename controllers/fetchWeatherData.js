@@ -130,7 +130,7 @@ const startWeatherDataFetching = async () => {
       } catch (error) {
         console.error("Error in periodic fetch:", error);
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 1 * 60 * 1000); // 5 minutes
   } catch (error) {
     console.error("Error starting weather data fetching:", error);
     throw error; // Rethrow to handle at application level
