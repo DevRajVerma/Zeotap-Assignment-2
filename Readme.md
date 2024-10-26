@@ -1,4 +1,4 @@
-# Zeotap Assignment 2
+# Zeotap Assignment 2 - Backend
 
 ## Overview
 
@@ -30,17 +30,12 @@ This project automates weather data collection using APIs and stores it for furt
    ```bash
    npm install
    ```
-3. Configure environment variables in a `.env` file (e.g., API keys, thresholds).
 
 ## Usage
 
 - **Run the server**:
   ```bash
   npm start
-  ```
-- **Trigger scheduler tasks manually**:
-  ```bash
-  npm run schedule
   ```
 
 ## Dependencies
@@ -51,14 +46,6 @@ This project automates weather data collection using APIs and stores it for furt
 - axios
 - nodemon
 - cors
-
-## Contributing
-
-Feel free to submit issues or pull requests if you'd like to contribute!
-
-## License
-
-This project is licensed under the MIT License.
 
 
 //summary route se summary mil rahi hai, city aur date dene pe
