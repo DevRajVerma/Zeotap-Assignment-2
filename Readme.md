@@ -59,7 +59,7 @@ This project automates weather data collection using APIs and stores it for furt
 
 - **/summary**: Users can input a city and date to view that day's weather summary for the selected city.
 
-### To retrieve the weather summary for a specific city, send a POST request to the following endpoint:
+- To retrieve the weather summary for a specific city, send a POST request to the following endpoint:
 
 **Endpoint:** `http://localhost:4000/api/summary`
 
@@ -70,7 +70,7 @@ This project automates weather data collection using APIs and stores it for furt
     "date": "2024-10-26",
     "city": "Delhi"
     }
-    
+    ```
 
 - Replace "date" with the desired date and "city" with the city name to get the summary for that specific day.
 
