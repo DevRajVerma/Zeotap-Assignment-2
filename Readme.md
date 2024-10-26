@@ -28,9 +28,9 @@ This project automates weather data collection using APIs and stores it for furt
    ```
 
 2. Go to Zeotap-Assignment-2 repository
-```bash
+    ```bash
    cd Zeotap-Assignment-2
-```
+    ```
 
 3. Install dependencies:
    ```bash
