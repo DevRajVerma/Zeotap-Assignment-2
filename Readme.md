@@ -23,14 +23,16 @@ This project automates weather data collection using APIs and stores it for furt
 ## Setup
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/DevRajVerma/Zeotap-Assignment-2.git
    ```
 
 2. Go to Zeotap-Assignment-2 repository
-    ```bash
+
+   ```bash
    cd Zeotap-Assignment-2
-    ```
+   ```
 
 3. Install dependencies:
    ```bash
@@ -53,12 +55,30 @@ This project automates weather data collection using APIs and stores it for furt
 - nodemon
 - cors
 
+## Routes
+
+- **/summary**: Users can input a city and date to view that day's weather summary for the selected city.
+
+### To retrieve the weather summary for a specific city, send a POST request to the following endpoint:
+
+**Endpoint:** `http://localhost:4000/api/summary`
+
+- **Request Body:**
+
+    ```json
+    {
+    "date": "2024-10-26",
+    "city": "Delhi"
+    }
+    ```json
+
+- Replace "date" with the desired date and "city" with the city name to get the summary for that specific day.
+
 ## What is happening after starting the server
-- Once the server starts, it continuously fetches weather data from the OpenWeatherMap API every 5 minutes and stores it in MongoDB. 
+
+- Once the server starts, it continuously fetches weather data from the OpenWeatherMap API every 5 minutes and stores it in MongoDB.
 
 - A cron job triggers daily at 00:05 to calculate the daily summary for the previous day for six metro cities: Delhi, Mumbai, Hyderabad, Chennai, Bangalore, and Kolkata, and these daily summaries are also stored in the database.
-
-- Using the /summary route, users can input a city and date to view that day's summary for the selected city. 
 
 - An alert system running in background checks against defined thresholds with each data fetch. If the temperature falls below the threshold in three consecutive checks, an alert is triggered.
 
@@ -66,6 +86,7 @@ This project automates weather data collection using APIs and stores it for furt
 
 - Checking against some real thresholds according to city temperature and condition
 
-- Daily summary calculating accurately, just something about the date, its calculating for yesterday which is technically correct as we have all the weather records for last day and not all weather records for today's date 
+- Daily summary calculating accurately, just something about the date, its calculating for yesterday which is technically correct as we have all the weather records for last day and not all weather records for today's date
 
 
+```
