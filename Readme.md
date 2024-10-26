@@ -1,21 +1,69 @@
-To ab tak humne kya kiya hai
-ki project setup kiya
-aur ab hum continuously api pe call marenge har 5 minute
-data fetch karenge, aur in memory mein store karenge
+# Zeotap Assignment 2
 
-data fetch ho rha hai continuously aur store ho rha hai db mein
+## Overview
 
-iske baad, ye jo data api se aaya tha, iska use krke summaries banayenge daily
-aur in summaries ko bhi db mein store kr denge
+This project automates weather data collection using APIs and stores it for further analysis. It includes features such as generating daily summaries and alerting users when certain thresholds are met. The backend is structured with controllers, models, services, routes, and schedulers for easy maintenance and scalability.
+
+## Features
+
+- **Weather Data Fetching**: Periodic API calls to fetch real-time weather data.
+- **Daily Summary**: Generates concise weather summaries every 24 hours.
+- **Alerts System**: Triggers alerts if certain weather conditions are met.
+
+## Project Structure
+
+```
+/controllers   # Handles API logic
+/models        # Defines database schemas
+/services      # Business logic for processing data
+/routes        # API endpoints
+/scheduler     # Schedules recurring tasks
+```
+
+## Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/DevRajVerma/Zeotap-Assignment-2.git
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Configure environment variables in a `.env` file (e.g., API keys, thresholds).
+
+## Usage
+
+- **Run the server**:
+  ```bash
+  npm start
+  ```
+- **Trigger scheduler tasks manually**:
+  ```bash
+  npm run schedule
+  ```
+
+## Dependencies
+
+- express
+- mongoose
+- node-cron
+- axios
+- nodemon
+- cors
+
+## Contributing
+
+Feel free to submit issues or pull requests if you'd like to contribute!
+
+## License
+
+This project is licensed under the MIT License.
+
 
 //summary route se summary mil rahi hai, city aur date dene pe
 
-we are using AlertThresholds to create alerts, but we have never created thresholds, so we won't ever be able to create alert
-
-
 Daily summary calculating accurately, just something about the date, its calculating for yesterday which is technically correct as we have all the weather records for last day and not the weather records for today's date, well, will see about it later 
-
-Now let's just check the alert System
 
 Then do the visualization and frontend part and all clear
 
