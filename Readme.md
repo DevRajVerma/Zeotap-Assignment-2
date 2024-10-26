@@ -66,6 +66,6 @@ This project automates weather data collection using APIs and stores it for furt
 
 - Checking against some real thresholds according to city temperature and condition
 
-Daily summary calculating accurately, just something about the date, its calculating for yesterday which is technically correct as we have all the weather records for last day and not the weather records for today's date 
+- Daily summary calculating accurately, just something about the date, its calculating for yesterday which is technically correct as we have all the weather records for last day and not all weather records for today's date 
 
 
