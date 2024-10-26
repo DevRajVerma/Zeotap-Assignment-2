@@ -70,7 +70,7 @@ This project automates weather data collection using APIs and stores it for furt
     "date": "2024-10-26",
     "city": "Delhi"
     }
-    ```json
+    
 
 - Replace "date" with the desired date and "city" with the city name to get the summary for that specific day.
 
